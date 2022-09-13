@@ -1,0 +1,144 @@
+- How to use this -
+Extract lua-5.4.4 source code in this directory, run ./amalgamate.sh
+
+Compile the resulting luaa.c with one of the following flags:
+-DMAKE_LIB             - compile liblua
+-DMAKE_LUA             - compile lua interpreter (the default)
+-DMAKE_LUAC            - compile luac compiler
+-DMAKE_LUA -DMAKE_LUAC - compile both, use argv[0] to pick which one to run
+Additionally you can use:
+-DNOPARSER             - don't include support for loading lua code
+-DNOUNDUMP             - don't include support for loading bytecode
+-DNODUMP               - don't include support for producing bytecode files
+
+In your code include luaa.h instead of lua.h/lualib.h/lauxlib.h
+
+
+- How did I do it -
+This is based on one.c available at https://www.lua.org/extras/5.4/one.c
+That file allows building liblua/lua/luac in a single translation unit.
+This is good news because it means that lua is already designed to have no
+issues when compiled this way.
+
+one.c does the following things
+- include lprefix.h (that's the first thing that every *.c file in lua does)
+- include a bunch of libc headers
+- define some stuff and include luaconf.h
+- include lua core and auxlib .c files
+- include lua library .c files unless we're building luac
+- depending on what we're building, include lua.c, luac.c or neither
+
+We want to do something similar except instead of using #include, we just
+concat the files.
+
+We also combine header files into a single luaa.h. Those are simply
+- luaconf.h lua.h lualib.h lauxlib.h
+
+Those header files include the following system headers:
+- limits.h stddef.h stdint.h assert.h stdarg.h stdio.h
+With assert.h and stdint.h being included conditionally
+
+one.c includes the following headers at the start
+- assert.h ctype.h errno.h float.h limits.h locale.h math.h setjmp.h signal.h
+  stdarg.h stddef.h stdio.h stdlib.h string.h time.h
+
+However the c files and private headers also include these (conditionally):
+- dlfcn.h io.h readline/history.h readline/readline.h stdint.h sys/types.h
+  sys/wait.h unistd.h windows.h
+
+Originally I thought I'd comment out system includes too, and just include all
+of them once at the top of luaa.c, but given the amount of conditionally
+included stuff, it's easier to just keep it. I'm not sure why one.c even bothers
+with including those headers early. Probably so that the namespace is clean when
+they're included.
+These are the actual conditions, by the way:
+
+/* luaconf.h */
+/* note that luaconf.h automatically defines LUA_USE_C89 on Windows */
+#if !defined(LUA_USE_C89) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#	include <stdint.h>
+#endif
+#if defined(LUA_USE_APICHECK)
+#	include <assert.h>
+#endif
+/* lauxlib.h */
+#if defined(LUAI_ASSERT)
+#	include <assert.h>
+#endif
+/* llimits.h */
+#if defined(LUAI_ASSERT)
+#	undef NDEBUG
+#	include <assert.h>
+#endif
+/* lutf8lib.c */
+#include <assert.h> /* unconditionally, but I think it's unused */
+/* loadlib.c */
+#if defined(LUA_USE_DLOPEN)
+#	include <dlfcn.h>
+#elif defined(LUA_DL_DLL)
+#	include <windows.h>
+#endif
+/* lua.c */
+#if !defined(lua_stdin_is_tty)
+#	if defined(LUA_USE_POSIX)
+#		define <unistd.h>
+#	elif defined(LUA_USE_WINDOWS)
+#		define <io.h>
+#		define <windows.h>
+#	endif
+#endif
+#if !defined(lua_readline)
+#	if defined(LUA_USE_READLINE)
+#		include <readline/readline.h>
+#		include <readline/history.h>
+#	endif
+#endif
+/* liolib.c */
+#if !defined(l_fseek)
+#	if defined(LUA_USE_POSIX)
+#		include <sys/types.h>
+#	endif
+#endif
+/* lauxlib.c */
+#if !defined(l_inspectstat)
+#	if defined(LUA_USE_POSIX)
+#		include <sys/wait.h>
+#	endif
+#endif
+/* loslib.c */
+#if !defined(lua_tmpnam)
+#	if defined(LUA_USE_POSIX)
+#		include <unistd.h>
+#	endif
+#endif
+
+
+Ahem. So we don't do the thing that one.c did with including all the libc
+headers early.
+
+We replace the luaconf.h include with our luaa.h which contains it. Since those
+are public headers, it's safe to include them early.
+
+Before we concat the C files we have to do all of private include files.
+For figuring out the order, there's depgraph.sh. It makes graph of all
+transclusions which don't involve *.c, lprefix.h or public headers.
+We just concat the files bottom-to-top.
+Two files are absent from this graph, because they're self-contained and are
+included from *.c only:
+- ljumptab.h is included by lvm.c inside luaV_execute
+- lopnames.h is included by luac.c only
+
+One completely new feature I added is ability to compile lua and luac into the
+same executable. This involves resolving four name collisions:
+- main progname writer pmain
+And of course I had to add a custom main that checks basename(argv[0]).
+The condition for compiling the standard library has to be changed for this.
+
+I also implemented noparser.c, which is available at the same place as one.c.
+Original noparser depends on the mechanics of static linking. By providing a
+substitute for luaX_init and luaY_parser, it prevents llex/lcode/lparser from
+being linked. Of course this doesn't work for a single translation unit, so we
+have to exclude C files manually.
+
+This uncovered a bug in noparser.c: luaU_undump doesn't match the correct
+declaration.
