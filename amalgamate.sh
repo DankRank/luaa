@@ -38,6 +38,11 @@ cat <<-EOF
 	#endif
 EOF
 rminc lprefix.h
+for i in \
+	assert.h ctype.h errno.h float.h limits.h locale.h math.h setjmp.h \
+	signal.h stdarg.h stddef.h stdio.h stdlib.h string.h time.h
+do echo "#include <$i>"
+done
 cat <<-EOF
 	/* setup for luaconf.h */
 	#define LUA_CORE

@@ -48,9 +48,9 @@ However the c files and private headers also include these (conditionally):
 
 Originally I thought I'd comment out system includes too, and just include all
 of them once at the top of luaa.c, but given the amount of conditionally
-included stuff, it's easier to just keep it. I'm not sure why one.c even bothers
-with including those headers early. Probably so that the namespace is clean when
-they're included.
+included stuff, it's easier to just keep it. However, I do still include some
+system headers at the start, because .c files define macros that can interfere
+with C++ versions of these (in particular math.h).
 These are the actual conditions, by the way:
 
 /* luaconf.h */
@@ -113,8 +113,8 @@ These are the actual conditions, by the way:
 #endif
 
 
-Ahem. So we don't do the thing that one.c did with including all the libc
-headers early.
+Ahem. So we just follow what one.c does and only include the unconditional ones
+early.
 
 We replace the luaconf.h include with our luaa.h which contains it. Since those
 are public headers, it's safe to include them early.
