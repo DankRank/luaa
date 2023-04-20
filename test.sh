@@ -2,7 +2,7 @@
 mkdir -p test
 {
 	all=""
-	flags="-lm -DLUA_USE_LINUX -ldl -Wall -Wno-unused-function"
+	flags="-lm -DLUA_USE_LINUX -ldl -Wall -Wno-unused-function -Wno-misleading-indentation"
 	for x in 'gcc -x c' 'g++ -x c++'; do
 		for m in \
 			'lualib.o:-DMAKE_LIB -c' \
