@@ -1,5 +1,5 @@
 - How to use this -
-Extract lua-5.4.4 source code in this directory, run ./amalgamate.sh
+Extract lua-5.4.4 source code in this directory, run ./amalgamate-5.4.sh
 
 Compile the resulting luaa.c with one of the following flags:
 -DMAKE_LIB             - compile liblua

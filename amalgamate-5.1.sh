@@ -24,7 +24,7 @@ noconflict() {
 	EOF
 }
 exec >luaa.c 3>luaa.h
-cd lua-5.1.5/src || exit
+cd lua-"$(./patchlevel 5.1)"/src || exit
 {
 	rminc luaconf.h lua.h lualib.h lauxlib.h | sed '/define LUA_USE_READLINE/d'
 } >&3
