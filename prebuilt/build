@@ -3,8 +3,6 @@ for i in 5.1 5.2 5.3 5.4; do
 	pl=$(../patchlevel $i)
 	if [ -d "../lua-$pl" ]; then
 		mkdir -p "$pl"
-		ln -sf "../../lua-$pl" "$pl/lua-$pl"
-		ln -sf "../../patchlevel" "$pl/patchlevel"
-		(cd "$pl" && "../../amalgamate-$i.sh")
+		(cd "$pl" && LUADIR="../../lua-$pl" "../../amalgamate-$i.sh")
 	fi
 done

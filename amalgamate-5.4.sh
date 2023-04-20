@@ -1,4 +1,6 @@
 #!/bin/sh
+LUAVER=5.4
+LUADIR=${LUADIR:=lua-$(./patchlevel $LUAVER)}
 rminc() {
 	sed '/#include *"/s!.*!/*&*/!' "$@"
 }
@@ -21,12 +23,18 @@ noconflict() {
 		#endif
 	EOF
 }
+header() {
+	echo "/* this file was generated from ${LUADIR##*/} source distribution */"
+	sed -n '/\/\*\*\*\*/,/\*\*\*\*\//p' lua.h
+}
 exec >luaa.c 3>luaa.h
-cd lua-"$(./patchlevel 5.4)"/src || exit
+cd "$LUADIR/src" || exit
 {
+	header
 	rminc luaconf.h lua.h lualib.h lauxlib.h
 } >&3
 
+header
 cat <<-EOF
 	/* default is to build the full interpreter */
 	#ifndef MAKE_LIB
