@@ -1,9 +1,9 @@
-/lua-5.4.4
-/lua-5.4.4.tar.gz
-/one.c
-/noparser.c
+/lua-5.*/
+/lua-5.*.tar.gz
+/one*.c
+/noparser*.c
 /test
 /luaa.c
 /luaa.h
-/depgraph.png
+/depgraph*.png
 /lua
